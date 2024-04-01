@@ -6,11 +6,13 @@ import (
 	"flag"
 	"log/slog"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/svenrisse/greenlight/internal/data"
+	"github.com/svenrisse/greenlight/internal/mailer"
 )
 
 const version = "1.0.0"
@@ -29,12 +31,20 @@ type config struct {
 		burst   int
 		enabled bool
 	}
+	smtp struct {
+		host     string
+		port     int
+		username string
+		password string
+		sender   string
+	}
 }
 
 type application struct {
 	config config
 	logger *slog.Logger
 	models data.Models
+	mailer mailer.Mailer
 }
 
 func main() {
@@ -47,15 +57,27 @@ func main() {
 		logger.Error("Error loading .env file")
 	}
 
+	cfg.db.dsn = os.Getenv("DB_DSN")
+	cfg.smtp.host = os.Getenv("SMTP_HOST")
+	cfg.smtp.port, err = strconv.Atoi(os.Getenv("SMTP_PORT"))
+	if err != nil {
+		logger.Error("Error converting smtp port")
+	}
+	cfg.smtp.username = os.Getenv("SMTP_USERNAME")
+	cfg.smtp.password = os.Getenv("SMTP_PASSWORD")
+	cfg.smtp.sender = os.Getenv("SMTP_SENDER")
+
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
-	flag.StringVar(&cfg.db.dsn, "db-dsn", os.Getenv("DB_DSN"), "PostgreSQL DSN")
+
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
 	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
 	flag.DurationVar(&cfg.db.maxIdleTime, "db-max-idle-time", 15*time.Minute, "PostgreSQL max connection idle time")
+
 	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate Limiter maximum requests per second")
 	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate Limiter maximum burst")
 	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
+
 	flag.Parse()
 
 	db, err := openDB(cfg)
@@ -70,6 +92,7 @@ func main() {
 		config: cfg,
 		logger: logger,
 		models: data.NewModels(db),
+		mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
 
 	err = app.serve()
