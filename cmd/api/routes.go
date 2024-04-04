@@ -26,6 +26,6 @@ func (app *application) routes() http.Handler {
 
 	router.HandlerFunc(http.MethodPost, "/v1/tokens/authentication", app.createAuthenticationTokenHandler)
 
-	standard := alice.New(app.recoverPanic, app.rateLimit)
+	standard := alice.New(app.recoverPanic, app.rateLimit, app.authenticate)
 	return standard.Then(router)
 }
