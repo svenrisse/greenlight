@@ -15,11 +15,12 @@ func (app *application) routes() http.Handler {
 
 	router.HandlerFunc(http.MethodGet, "/v1/health", app.healthcheckHandler)
 
-	router.HandlerFunc(http.MethodGet, "/v1/movies", app.listMovieHandler)
-	router.HandlerFunc(http.MethodPost, "/v1/movies", app.createMovieHandler)
-	router.HandlerFunc(http.MethodGet, "/v1/movies/:id", app.showMovieHandler)
-	router.HandlerFunc(http.MethodPatch, "/v1/movies/:id", app.updateMovieHandler)
-	router.HandlerFunc(http.MethodDelete, "/v1/movies/:id", app.deleteMovieHandler)
+	protected := alice.New(app.requireActivatedUser)
+	router.Handler(http.MethodGet, "/v1/movies", protected.ThenFunc(app.listMovieHandler))
+	router.Handler(http.MethodPost, "/v1/movies", protected.ThenFunc(app.createMovieHandler))
+	router.Handler(http.MethodGet, "/v1/movies/:id", protected.ThenFunc(app.showMovieHandler))
+	router.Handler(http.MethodPatch, "/v1/movies/:id", protected.ThenFunc(app.updateMovieHandler))
+	router.Handler(http.MethodDelete, "/v1/movies/:id", protected.ThenFunc(app.deleteMovieHandler))
 
 	router.HandlerFunc(http.MethodPost, "/v1/users", app.registerUserHandler)
 	router.HandlerFunc(http.MethodPut, "/v1/users/activated", app.activateUserHandler)
