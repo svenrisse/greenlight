@@ -92,10 +92,13 @@ production/deploy/api:
 	rsync -P ./bin/linux_amd64/api ${PROD_USER}@${PROD_IP}:~/greenlight/
 	rsync -P ./.env ${PROD_USER}@${PROD_IP}:~/greenlight/
 	rsync -rP --delete ./migrations ${PROD_USER}@${PROD_IP}:~/greenlight/
+	rsync -P ./remote/production/Caddyfile ${PROD_USER}@${PROD_IP}:~/greenlight/
 	rsync -P ./remote/production/api.service ${PROD_USER}@${PROD_IP}:~/greenlight/
 	ssh -t ${PROD_USER}@${PROD_IP} '\
 		migrate -path ~/greenlight/migrations -database $$GREENLIGHT_DB_DSN up \
 		&& sudo mv ~/greenlight/api.service /etc/systemd/system/ \
 		&& sudo systemctl enable api \
 		&& sudo systemctl restart api \
+		&& sudo mv ~/greenlight/Caddyfile /etc/caddy/ \
+		&& sudo systemctl reload caddy \
 	'
