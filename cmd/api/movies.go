@@ -120,7 +120,7 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	if input.Genres != nil {
-		movie.Genres = *&input.Genres
+		movie.Genres = input.Genres
 	}
 
 	v := validator.New()
