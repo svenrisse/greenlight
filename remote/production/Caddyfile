@@ -1,0 +1,8 @@
+{
+ email dev@svenrisse.com
+}
+
+greenlight.svenrisse.dev {
+  respond /metrics "Not Permitted" 403
+  reverse_proxy localhost:4000
+}
