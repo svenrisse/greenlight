@@ -153,28 +153,51 @@ func (app *application) requireActivatedUser(next http.HandlerFunc) http.Handler
 
 func (app *application) requirePermission(code string, next http.HandlerFunc) http.HandlerFunc {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		// Retrieve the user from the request context.
 		user := app.contextGetUser(r)
 
-		// Get the slice of permissions for the user.
 		permissions, err := app.models.Permissions.GetAllForUser(user.ID)
 		if err != nil {
 			app.serverErrorResponse(w, r, err)
 			return
 		}
 
-		// Check if the slice includes the required permission. If it doesn't, then
-		// return a 403 Forbidden response.
 		if !permissions.Include(code) {
 			app.notPermittedResponse(w, r)
 			return
 		}
 
-		// Otherwise they have the required permission so we call the next handler in
-		// the chain.
 		next.ServeHTTP(w, r)
 	}
 
-	// Wrap this with the requireActivatedUser() middleware before returning it.
 	return app.requireActivatedUser(fn)
+}
+
+func (app *application) enableCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Vary", "Origin")
+
+		w.Header().Add("Vary", "Access-Control-Request-Method")
+
+		origin := r.Header.Get("Origin")
+
+		if origin != "" {
+			for i := range app.config.cors.trustedOrigins {
+				if origin == app.config.cors.trustedOrigins[i] {
+					w.Header().Set("Access-Control-Allow-Origin", origin)
+
+					// check for preflight req
+					if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
+
+						w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, PUT, PATCH, DELETE")
+						w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+
+						w.WriteHeader(http.StatusOK)
+						return
+					}
+					break
+				}
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
