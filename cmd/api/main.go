@@ -67,7 +67,6 @@ func main() {
 		logger.Error("Error loading .env file")
 	}
 
-	cfg.db.dsn = os.Getenv("DB_DSN")
 	cfg.smtp.host = os.Getenv("SMTP_HOST")
 	cfg.smtp.port, err = strconv.Atoi(os.Getenv("SMTP_PORT"))
 	if err != nil {
@@ -80,6 +79,7 @@ func main() {
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
 
+	flag.StringVar(&cfg.db.dsn, "db-dsn", os.Getenv("DB_DSN"), "PostgreSQL connection string")
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
 	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
 	flag.DurationVar(&cfg.db.maxIdleTime, "db-max-idle-time", 15*time.Minute, "PostgreSQL max connection idle time")

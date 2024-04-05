@@ -85,3 +85,17 @@ build/api:
 .PHONY: production/connect
 production/connect:
 	ssh ${PROD_USER}@${PROD_IP}
+
+## production/deploy/api: deploy the api to production
+.PHONY: production/deploy/api
+production/deploy/api:
+	rsync -P ./bin/linux_amd64/api ${PROD_USER}@${PROD_IP}:~/greenlight/
+	rsync -P ./.env ${PROD_USER}@${PROD_IP}:~/greenlight/
+	rsync -rP --delete ./migrations ${PROD_USER}@${PROD_IP}:~/greenlight/
+	rsync -P ./remote/production/api.service ${PROD_USER}@${PROD_IP}:~/greenlight/
+	ssh -t ${PROD_USER}@${PROD_IP} '\
+		migrate -path ~/greenlight/migrations -database $$GREENLIGHT_DB_DSN up \
+		&& sudo mv ~/greenlight/api.service /etc/systemd/system/ \
+		&& sudo systemctl enable api \
+		&& sudo systemctl restart api \
+	'
